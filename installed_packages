@@ -1,0 +1,6 @@
+requests==2.10.0
+simplejson==3.8.2
+six==1.10.0
+slacker==0.9.17
+SQLAlchemy==1.0.13
+websocket-client==0.37.0
