@@ -12,6 +12,10 @@ class User(Base):
     user_name = Column(String(150), nullable=True)
     worklogs = relationship('WorkLog')
 
+    def __init__(self, user_key, user_name):
+        self.user_key = user_key
+        self.user_name = user_name
+
 
 class WorkLog(Base):
     __tablename__ = 'worklog'

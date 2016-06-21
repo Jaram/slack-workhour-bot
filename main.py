@@ -13,16 +13,10 @@
 # slack = Slacker(BOT_API_KEY)
 
 
-from service.message import MessageParser
+from service.worklog import CommuteLogger
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
+commute_logger = CommuteLogger()
 
-message_parser = MessageParser()
-
-message = message_parser.parse('''{
-    "type": "hello"
-}''')
-
-message.process()

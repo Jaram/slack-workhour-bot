@@ -1,32 +1,33 @@
-from model.worklog import User, WorkLog
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
-_session_factory = SqlSessionFactory()
+from database.session import SqlSessionAware
+from model.worklog import User, WorkLog
 
-class WorkLogAccessor(object):
-    def __init__(self, user_key):
-        self.session = _session_factory.create()
-        self.user = self.session.query(User).filter(User.user_key == user_key).one()
+import logging
 
+class CommuteLogger(SqlSessionAware):
+    def __init__(self):
+        super(CommuteLogger, self).__init__()
 
-class WorkLogReader(WorkLogAccessor):
-    def __init__(self, user_key):
-        super(WorkLogReader, self).__init__(user_key)
+    def enter_office(self, user_key):
+        user = self._get_or_create_user(user_key)
+        pass
+
+    def leave_office(self, user_key):
+        pass
     
-    def findAll(self, year=None, month=None):
-        today = datetime.now()
-        if not year:
-            year = today.year
-        if not month:
-            month = today.month
+    def _get_or_create_user(self, user_key):
+        try:
+            return self.session.query(User).filter(User.user_key == user_key).one()
+        except:
+            logging.debug('creating new user')
+            user = User(user_key, 'name not set yet')
+            self.session.add(user)
+            self.session.commit()
+            return user
 
-        return user.worklogs
-
-
-
-class WorkLogWriter(WorkLogAccessor):
-    def __init__(self, user_key):
-        super(WorkLogWriter, self).__init__(user_key)
-    
-    
-
+    def _get_or_create_worklog(self, user):
+        worklog = self.session.query(WorkLog).filter(WorkLog.user_id == user.id)
+        pass
+        
