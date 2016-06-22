@@ -12,10 +12,14 @@ class CommuteLogger(SqlSessionAware):
 
     def enter_office(self, user_key):
         user = self._get_or_create_user(user_key)
-        pass
+        worklog = self._create_worklog(user)
 
     def leave_office(self, user_key):
-        pass
+        user = self._get_or_create_user(user_key)
+        worklog = self._get_latest_worklog(user)
+        worklog.end_time = datetime.now()
+        self.session.commit()
+        return worklog
     
     def _get_or_create_user(self, user_key):
         try:
@@ -27,7 +31,11 @@ class CommuteLogger(SqlSessionAware):
             self.session.commit()
             return user
 
-    def _get_or_create_worklog(self, user):
-        worklog = self.session.query(WorkLog).filter(WorkLog.user_id == user.id)
-        pass
+    def _create_worklog(self, user):
+        worklog = WorkLog(user, datetime.now())
+        self.session.add(worklog)
+        self.session.commit()
+        return worklog
         
+    def _get_latest_worklog(self, user):
+        return self.session.query(WorkLog).filter(WorkLog.user_id == user.id).order_by(WorkLog.start_time.desc()).first()

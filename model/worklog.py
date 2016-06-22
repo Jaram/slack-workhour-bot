@@ -16,6 +16,9 @@ class User(Base):
         self.user_key = user_key
         self.user_name = user_name
 
+    def __repr__(self):
+        return "User<id:{}, user_key:{}>".format(self.id, self.user_key)
+
 
 class WorkLog(Base):
     __tablename__ = 'worklog'
@@ -25,3 +28,11 @@ class WorkLog(Base):
 
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=True)
+
+    def __init__(self, user, start_time):
+        self.user_id = user.id
+        self.start_time = start_time
+
+    def __repr__(self):
+        return "WorkLog<id:{}, user_id:{}, start_time:{}, end_time:{}>"\
+            .format(self.id, self.user_id, self.start_time, self.end_time)
