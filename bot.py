@@ -1,12 +1,14 @@
 # -*- coding:utf-8 -*-
 
 import logging
+import simplejson as json
 import websocket
 
 from slacker import Slacker
 
 from model.message import MessageType
 from service.message import MessageParser
+from service.worklog import CommuteLogger
 from exception.message import MessageParseException
 
 class UserInfo():
@@ -26,7 +28,7 @@ class Connection():
         self.connection = websocket.WebSocket()
         self.reconnect_url = url
         self.message_parser = MessageParser()
-
+        self.message_id = 0
         self._connect()
 
     def _connect(self):
@@ -36,13 +38,31 @@ class Connection():
         try:
             recved_data = self.connection.recv()
             return self.message_parser.parse(recved_data)
-        except MessageParseException as e:
-            logging.info(e)
+        except MessageParseException as parse_exception:
+            logging.info(parse_exception)
             return None
-        except Exception:
+        except Exception as general_exception:
+            logging.warn(general_exception.message)
+            logging.info('reconnecting')
             self._connect()
             return None
-        
+
+    def send_message(self, channel_key, message):
+        payload = dict(
+            id = self._issue_message_id(),
+            type = 'message',
+            channel = channel_key,
+            text = message
+            )
+
+        self.connection.send(json.dumps(payload))
+
+    def new_reconnect_url(self, url):
+        self.reconnect_url = url
+
+    def _issue_message_id(self):
+        self.message_id = self.message_id + 1
+        return self.message_id
 
 class WorkHourBot():
     def __init__(self, api_key):
@@ -51,6 +71,7 @@ class WorkHourBot():
         self.user_infos = dict()
         self.channel_infos = dict()
         self.connection = None
+        self.commute_logger = CommuteLogger()
         
         self._init_message_handler()
         
@@ -58,7 +79,8 @@ class WorkHourBot():
         self.message_handler = {
             MessageType.HELLO : self._handle_hello_message,
             MessageType.RECONNECT_URL : self._handle_reconnect_url_message,
-            MessageType.TEXT : self._handle_text_message
+            MessageType.TEXT : self._handle_text_message,
+            MessageType.ERROR : self._handle_error_message,
             }
             
 
@@ -73,7 +95,7 @@ class WorkHourBot():
                 self._handle_message(message)
             
     def _rtm_start(self):
-        response = self.slack.rtm.start()
+        response = self.slack.rtm.start(simple_latest=True, no_unreads=True)
         for userinfo_dict in response.body['users']:
             self.user_infos[userinfo_dict['id']] = UserInfo(userinfo_dict['id'], userinfo_dict['real_name'])
         for channelinfo_dict in response.body['channels']:
@@ -93,6 +115,7 @@ class WorkHourBot():
 
     def _handle_reconnect_url_message(self, message):
         logging.info('reconnect url message recved')
+        self.connection.new_reconnect_url(message.url)
 
     def _handle_text_message(self, message):
         logging.info('text message recved')
@@ -112,7 +135,12 @@ class WorkHourBot():
 
         if u'!출근' in message.text:
             logging.info("""'{}' said i'm entering the office""".format(user_info.user_name))
+            self.commute_logger.enter_office(user_info)
         if u'!퇴근' in message.text:
             logging.info("""'{}' said i'm leaving the office""".format(user_info.user_name))
-
+            worklog = self.commute_logger.leave_office(user_info)
+            worktime = (float((worklog.end_time - worklog.start_time).seconds)) / 60 / 60
+            self.connection.send_message(channel_info.channel_key, u'{}님은 오늘 {}시간 일했음'.format(user_info.user_name, worktime))
         
+    def _handle_error_message(self, message):
+        logging.info('error. code:{}, message:{}'.format(message.error_code, message.error_message))

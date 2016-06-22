@@ -1,3 +1,4 @@
+import logging
 import simplejson as json
 
 from model.message import *
@@ -10,13 +11,15 @@ class MessageParser():
             MessageType.RECONNECT_URL : ReconnectUrlMessage,
             MessageType.TEXT : TextMessage,
             MessageType.TEAM_JOIN : TextMessage,
+            MessageType.ERROR : ErrorMessage,
             }
     
     def parse(self, jsonText):
         jsonObj = json.loads(jsonText)
+        logging.debug(jsonObj)
 
-        handle_class = self.MESSAGE_MAPPING.get(jsonObj['type'])
+        handle_class = self.MESSAGE_MAPPING.get(jsonObj.get('type'))
         if not handle_class:
-            raise MessageParseException('no parsable message. type:{}'.format(jsonObj['type']))
+            raise MessageParseException('no parsable message. type:{}'.format(jsonObj.get('type')))
 
         return handle_class(jsonObj)

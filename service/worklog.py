@@ -10,12 +10,14 @@ class CommuteLogger(SqlSessionAware):
     def __init__(self):
         super(CommuteLogger, self).__init__()
 
-    def enter_office(self, user_key):
-        user = self._get_or_create_user(user_key)
+    def enter_office(self, user_info):
+        user = self._get_or_create_user(user_info.user_key)
         worklog = self._create_worklog(user)
+        user.user_name = user_info.user_name
+        self.session.commit()
 
-    def leave_office(self, user_key):
-        user = self._get_or_create_user(user_key)
+    def leave_office(self, user_info):
+        user = self._get_or_create_user(user_info.user_key)
         worklog = self._get_latest_worklog(user)
         worklog.end_time = datetime.now()
         self.session.commit()
