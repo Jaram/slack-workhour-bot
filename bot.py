@@ -1,3 +1,5 @@
+# -*- coding:utf-8 -*-
+
 import logging
 import websocket
 
@@ -11,6 +13,12 @@ class UserInfo():
     def __init__(self, user_key, user_name):
         self.user_key = user_key
         self.user_name = user_name
+
+
+class ChannelInfo():
+    def __init__(self, channel_key, channel_name):
+        self.channel_key = channel_key
+        self.channel_name = channel_name
 
 
 class Connection():
@@ -40,7 +48,8 @@ class WorkHourBot():
     def __init__(self, api_key):
         self.api_key = api_key
         self.slack = Slacker(api_key)
-        self.userinfos = dict()
+        self.user_infos = dict()
+        self.channel_infos = dict()
         self.connection = None
         
         self._init_message_handler()
@@ -66,7 +75,11 @@ class WorkHourBot():
     def _rtm_start(self):
         response = self.slack.rtm.start()
         for userinfo_dict in response.body['users']:
-            self.userinfos[userinfo_dict['id']] = UserInfo(userinfo_dict['id'], userinfo_dict['real_name'])
+            self.user_infos[userinfo_dict['id']] = UserInfo(userinfo_dict['id'], userinfo_dict['real_name'])
+        for channelinfo_dict in response.body['channels']:
+            channel_key = channelinfo_dict['id']
+            self.channel_infos[channel_key] = ChannelInfo(channel_key, channelinfo_dict['name'])
+
         return response.body['url']
     
     def _handle_message(self, message):
@@ -83,3 +96,23 @@ class WorkHourBot():
 
     def _handle_text_message(self, message):
         logging.info('text message recved')
+        channel_info = self.channel_infos.get(message.channel_key)
+        if not channel_info:
+            logging.debug('no tracking channel')
+            return
+        
+        if not channel_info.channel_name == 'work_end':
+            logging.debug('no tracking channel. channel_name:{}'.format(channel_info.channel_name))
+            return
+
+        user_info = self.user_infos.get(message.user_key)
+        if not user_info:
+            logging.debug('no user info. key:{}'.format(message.user_key))
+            return
+
+        if u'!출근' in message.text:
+            logging.info("""'{}' said i'm entering the office""".format(user_info.user_name))
+        if u'!퇴근' in message.text:
+            logging.info("""'{}' said i'm leaving the office""".format(user_info.user_name))
+
+        

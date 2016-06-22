@@ -5,7 +5,7 @@ import logging
 class MessageType():
     HELLO = 'hello'
     RECONNECT_URL = 'reconnect_url'
-    TEXT = 'text'
+    TEXT = 'message'
     TEAM_JOIN = 'team_join'
     
 
@@ -31,6 +31,9 @@ class TextMessage(BaseMessage):
     def __init__(self, jsonObj):
         super(TextMessage, self).__init__(jsonObj)
         self.text = jsonObj['text']
+        self.channel_key = jsonObj['channel']
+        self.user_key = jsonObj['user']
+        self.ts = jsonObj['ts']
 
     
 class TeamJoinMessage(BaseMessage):

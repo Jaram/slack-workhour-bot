@@ -8,6 +8,7 @@ class MessageParser():
         self.MESSAGE_MAPPING = {
             MessageType.HELLO : HelloMessage,
             MessageType.RECONNECT_URL : ReconnectUrlMessage,
+            MessageType.TEXT : TextMessage,
             MessageType.TEAM_JOIN : TextMessage,
             }
     
@@ -16,6 +17,6 @@ class MessageParser():
 
         handle_class = self.MESSAGE_MAPPING.get(jsonObj['type'])
         if not handle_class:
-            raise MessageParseException('no parsable message')
+            raise MessageParseException('no parsable message. type:{}'.format(jsonObj['type']))
 
         return handle_class(jsonObj)
