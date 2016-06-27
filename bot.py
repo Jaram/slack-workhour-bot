@@ -58,6 +58,7 @@ class Connection():
         self.connection.send(json.dumps(payload))
 
     def new_reconnect_url(self, url):
+        logging.debug('setting new reconnect url. url:{}'.format(url))
         self.reconnect_url = url
 
     def _issue_message_id(self):
