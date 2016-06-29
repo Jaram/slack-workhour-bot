@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 
 import logging
+import re
 import simplejson as json
 import websocket
 
@@ -9,6 +10,7 @@ from slacker import Slacker
 from model.message import MessageType
 from service.message import MessageParser
 from service.worklog import CommuteLogger
+from service.burgerking import BurgerKingCouponGenerator
 from exception.message import MessageParseException
 
 class UserInfo():
@@ -139,9 +141,88 @@ class WorkHourBot():
             self.commute_logger.enter_office(user_info)
         if u'!퇴근' in message.text:
             logging.info("""'{}' said i'm leaving the office""".format(user_info.user_name))
-            worklog = self.commute_logger.leave_office(user_info)
-            worktime = (float((worklog.end_time - worklog.start_time).seconds)) / 60 / 60
-            self.connection.send_message(channel_info.channel_key, u'{}님은 오늘 {}시간 일했음'.format(user_info.user_name, worktime))
+            try:
+                worklog = self.commute_logger.leave_office(user_info)
+                worktime = (float((worklog.end_time - worklog.start_time).seconds)) / 60 / 60
+                self.connection.send_message(channel_info.channel_key, u'{}님은 오늘 {}시간 일했음'.format(user_info.user_name, worktime))
+            except:
+                self.connection.send_message(channel_info.channel_key, u'{}님은 출근을 안찍으셨어요'.format(user_info.user_name))
         
+    def _handle_error_message(self, message):
+        logging.info('error. code:{}, message:{}'.format(message.error_code, message.error_message))
+
+
+class BurgerKingBot():
+    def __init__(self, api_key):
+        self.api_key = api_key
+        self.slack = Slacker(api_key)
+        self.user_infos = dict()
+        self.channel_infos = dict()
+        self.connection = None
+        self.generator = BurgerKingCouponGenerator()
+        self.receipt_num_re = re.compile('(?P<receipt_num>\d{16})')
+
+        self._init_message_handler()
+        
+    def _init_message_handler(self):
+        self.message_handler = {
+            MessageType.HELLO : self._handle_hello_message,
+            MessageType.RECONNECT_URL : self._handle_reconnect_url_message,
+            MessageType.TEXT : self._handle_text_message,
+            MessageType.ERROR : self._handle_error_message,
+            }
+            
+
+    def run(self):
+        server_url = self._rtm_start()
+
+        self.connection = Connection(server_url)
+        # main loop
+        while True:
+            message = self.connection.get_message()
+            if message:
+                self._handle_message(message)
+            
+    def _rtm_start(self):
+        response = self.slack.rtm.start(simple_latest=True, no_unreads=True)
+        for userinfo_dict in response.body['users']:
+            self.user_infos[userinfo_dict['id']] = UserInfo(userinfo_dict['id'], userinfo_dict['real_name'])
+        for channelinfo_dict in response.body['channels']:
+            channel_key = channelinfo_dict['id']
+            self.channel_infos[channel_key] = ChannelInfo(channel_key, channelinfo_dict['name'])
+
+        return response.body['url']
+    
+    def _handle_message(self, message):
+        handler = self.message_handler.get(message.type)
+        if not handler:
+            raise Exception('no handler for message. type:{}'.format(message.type))
+        handler(message)
+        
+    def _handle_hello_message(self, message):
+        logging.info('hello message recved')
+
+    def _handle_reconnect_url_message(self, message):
+        logging.info('reconnect url message recved')
+        self.connection.new_reconnect_url(message.url)
+
+    def _handle_text_message(self, message):
+        logging.info('text message recved')
+        channel_info = self.channel_infos.get(message.channel_key)
+        if not channel_info:
+            logging.debug('no tracking channel')
+            return
+        
+        if not channel_info.channel_name == 'general':
+            logging.debug('no tracking channel. channel_name:{}'.format(channel_info.channel_name))
+            return
+        if u'!버거킹' in message.text:
+            match = self.receipt_num_re.search(message.text)
+            if match:
+                receipt_num = match.group('receipt_num')
+                if receipt_num:
+                    coupon_num = self.generator.generate(receipt_num)
+                    self.connection.send_message(channel_info.channel_key, u'버거킹 할인쿠폰 생성함. <{}>'.format(coupon_num))
+
     def _handle_error_message(self, message):
         logging.info('error. code:{}, message:{}'.format(message.error_code, message.error_message))
