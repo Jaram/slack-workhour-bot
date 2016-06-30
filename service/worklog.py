@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
@@ -19,6 +21,9 @@ class CommuteLogger(SqlSessionAware):
     def leave_office(self, user_info):
         user = self._get_or_create_user(user_info.user_key)
         worklog = self._get_latest_worklog(user)
+        if not worklog:
+            logging.error('did not entered the office')
+            raise Exception('no worklog')
         worklog.end_time = datetime.now()
         self.session.commit()
         return worklog

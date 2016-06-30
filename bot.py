@@ -95,7 +95,10 @@ class WorkHourBot():
         while True:
             message = self.connection.get_message()
             if message:
-                self._handle_message(message)
+                try:
+                    self._handle_message(message)
+                except Exception as e:
+                    logging.error(e)
             
     def _rtm_start(self):
         response = self.slack.rtm.start(simple_latest=True, no_unreads=True)
@@ -141,12 +144,9 @@ class WorkHourBot():
             self.commute_logger.enter_office(user_info)
         if u'!퇴근' in message.text:
             logging.info("""'{}' said i'm leaving the office""".format(user_info.user_name))
-            try:
-                worklog = self.commute_logger.leave_office(user_info)
-                worktime = (float((worklog.end_time - worklog.start_time).seconds)) / 60 / 60
-                self.connection.send_message(channel_info.channel_key, u'{}님은 오늘 {}시간 일했음'.format(user_info.user_name, worktime))
-            except:
-                self.connection.send_message(channel_info.channel_key, u'{}님은 출근을 안찍으셨어요'.format(user_info.user_name))
+            worklog = self.commute_logger.leave_office(user_info)
+            worktime = (float((worklog.end_time - worklog.start_time).seconds)) / 60 / 60
+            self.connection.send_message(channel_info.channel_key, u'{}님은 오늘 {}시간 일했음'.format(user_info.user_name, worktime))
         
     def _handle_error_message(self, message):
         logging.info('error. code:{}, message:{}'.format(message.error_code, message.error_message))
