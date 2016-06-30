@@ -12,19 +12,20 @@ class CommuteLogger(SqlSessionAware):
     def __init__(self):
         super(CommuteLogger, self).__init__()
 
-    def enter_office(self, user_info):
+    def enter_office(self, user_info, time):
         user = self._get_or_create_user(user_info.user_key)
-        worklog = self._create_worklog(user)
+        worklog = self._create_worklog(user, self._date_string_to_date_time(time))
         user.user_name = user_info.user_name
         self.session.commit()
+        return worklog
 
-    def leave_office(self, user_info):
+    def leave_office(self, user_info, time):
         user = self._get_or_create_user(user_info.user_key)
         worklog = self._get_latest_worklog(user)
         if not worklog:
             logging.error('did not entered the office')
             raise Exception('no worklog')
-        worklog.end_time = datetime.now()
+        worklog.end_time = self._date_string_to_date_time(time)
         self.session.commit()
         return worklog
     
@@ -38,11 +39,21 @@ class CommuteLogger(SqlSessionAware):
             self.session.commit()
             return user
 
-    def _create_worklog(self, user):
-        worklog = WorkLog(user, datetime.now())
+    def _create_worklog(self, user, date_time):
+        worklog = WorkLog(user, date_time)
         self.session.add(worklog)
         self.session.commit()
         return worklog
         
     def _get_latest_worklog(self, user):
-        return self.session.query(WorkLog).filter(WorkLog.user_id == user.id).order_by(WorkLog.start_time.desc()).first()
+        return self.session.query(WorkLog).filter(WorkLog.user_id == user.id).order_by(WorkLog.id.desc()).first()
+
+    def _date_string_to_date_time(self, date_string):
+        date = datetime.now()
+        if date_string is not None:
+            datas = date_string.split(':')
+            hour = datas[0]
+            minute = datas[1]
+            date = datetime.now()
+            date = date.replace(hour=int(hour), minute=int(minute), second=0)
+        return date
