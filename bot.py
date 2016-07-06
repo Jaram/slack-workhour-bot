@@ -141,7 +141,7 @@ class WorkHourBot():
         start_time = re.search('출근', message.text.encode('utf-8'))
         end_time = re.search('퇴근', message.text.encode('utf-8'))
 
-        custom_time = re.search('([0-1]\d|2[0-3]):[0-5]\d', message.text.encode('utf-8'))
+        custom_time = re.search('(\d|1\d|2[0-3]):[0-5]\d', message.text.encode('utf-8'))
         time = None
         if custom_time != None:
             time = custom_time.group(0)
@@ -230,7 +230,7 @@ class BurgerKingBot():
             logging.debug('no tracking channel')
             return
         
-        if not channel_info.channel_name == 'general':
+        if not channel_info.channel_name == 'work_end':
             logging.debug('no tracking channel. channel_name:{}'.format(channel_info.channel_name))
             return
         if u'!버거킹' in message.text:
