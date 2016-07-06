@@ -130,7 +130,7 @@ class WorkHourBot():
             logging.debug('no tracking channel')
             return
         
-        if not channel_info.channel_name == 'general':
+        if not channel_info.channel_name == 'work_end':
             logging.debug('no tracking channel. channel_name:{}'.format(channel_info.channel_name))
             return
 
@@ -230,7 +230,7 @@ class BurgerKingBot():
             logging.debug('no tracking channel')
             return
         
-        if not channel_info.channel_name == 'work_end':
+        if not channel_info.channel_name == 'general':
             logging.debug('no tracking channel. channel_name:{}'.format(channel_info.channel_name))
             return
         if u'!버거킹' in message.text:
