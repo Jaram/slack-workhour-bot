@@ -99,7 +99,7 @@ class WorkHourBot():
                     self._handle_message(message)
                 except Exception as e:
                     logging.error(e)
-            
+
     def _rtm_start(self):
         response = self.slack.rtm.start(simple_latest=True, no_unreads=True)
         for userinfo_dict in response.body['users']:
@@ -138,16 +138,33 @@ class WorkHourBot():
         if not user_info:
             logging.debug('no user info. key:{}'.format(message.user_key))
             return
+        start_time = re.search('출근', message.text.encode('utf-8'))
+        end_time = re.search('퇴근', message.text.encode('utf-8'))
 
-        if u'!출근' in message.text:
+        custom_time = re.search('(\d|1\d|2[0-3]):[0-5]\d', message.text.encode('utf-8'))
+        time = None
+        if custom_time != None:
+            time = custom_time.group(0)
+
+        if start_time != None:
             logging.info("""'{}' said i'm entering the office""".format(user_info.user_name))
-            self.commute_logger.enter_office(user_info)
-        if u'!퇴근' in message.text:
+            worklog = self.commute_logger.enter_office(user_info, time)
+            self.connection.send_message(channel_info.channel_key,
+                                         u'{}님은 오늘 {}에 출근함'.format(user_info.user_name,
+                                                                   worklog.start_time.strftime('%H:%M')))
+
+        if end_time != None:
             logging.info("""'{}' said i'm leaving the office""".format(user_info.user_name))
-            worklog = self.commute_logger.leave_office(user_info)
+            worklog = self.commute_logger.leave_office(user_info, time)
             worktime = (float((worklog.end_time - worklog.start_time).seconds)) / 60 / 60
-            self.connection.send_message(channel_info.channel_key, u'{}님은 오늘 {}시간 일했음'.format(user_info.user_name, worktime))
-        
+            self.connection.send_message(channel_info.channel_key,
+                                         u'{}님은 오늘 {}에 퇴근함'.format(user_info.user_name,
+                                                                   worklog.end_time.strftime('%H:%M')))
+            self.connection.send_message(channel_info.channel_key,
+                                         u'{}님은 {}에 출근하고, {}에 퇴근하여, 오늘 {}시간 일했음'.format(user_info.user_name, worklog.start_time.strftime('%H:%M'), worklog.end_time.strftime('%H:%M'), worktime))
+
+
+
     def _handle_error_message(self, message):
         logging.info('error. code:{}, message:{}'.format(message.error_code, message.error_message))
 
