@@ -22,4 +22,7 @@ class MessageParser():
         if not handle_class:
             raise MessageParseException('no parsable message. type:{}'.format(jsonObj.get('type')))
 
-        return handle_class(jsonObj)
+        try:
+            return handle_class(jsonObj)
+        except:
+            raise MessageParseException('format for message type:{} is invalid'.format(jsonObj.get('type')))
