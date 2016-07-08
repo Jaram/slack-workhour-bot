@@ -87,3 +87,7 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Auto builded files by IDEA
+.idea/
+database.sqlite3
