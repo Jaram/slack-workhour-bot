@@ -2,9 +2,11 @@ import logging
 
 from bot import WorkHourBot
 
-logging.basicConfig(level=logging.DEBUG)
+FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 
-BOT_API_KEY = 'xoxb-52734009232-jO4KNpOpq8AZnktWyJgmgAZW'
+logging.basicConfig(level=logging.DEBUG, format=FORMAT)
+
+BOT_API_KEY = 'xoxb-52734009232-HGc79zauJ1hxopup59ttNlgq'
 
 bot = WorkHourBot(BOT_API_KEY)
 bot.run()
