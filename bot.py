@@ -141,7 +141,7 @@ class WorkHourBot():
         start_time = re.search('출근', message.text.encode('utf-8'))
         end_time = re.search('퇴근', message.text.encode('utf-8'))
 
-        custom_time = re.search('(\d|1\d|2[0-3]):[0-5]\d', message.text.encode('utf-8'))
+        custom_time = re.search('(\d|[0-1]\d|2[0-3]):[0-5]\d', message.text.encode('utf-8'))
         time = None
         if custom_time != None:
             time = custom_time.group(0)
@@ -156,12 +156,14 @@ class WorkHourBot():
         if end_time != None:
             logging.info("""'{}' said i'm leaving the office""".format(user_info.user_name))
             worklog = self.commute_logger.leave_office(user_info, time)
-            worktime = (float((worklog.end_time - worklog.start_time).seconds)) / 60 / 60
+            worktime = (float((worklog.end_time - worklog.start_time).seconds))
+            workhour = int(worktime) / 60 / 60
+            workmin = int(worktime) / 60 % 60
             self.connection.send_message(channel_info.channel_key,
                                          u'{}님은 오늘 {}에 퇴근함'.format(user_info.user_name,
                                                                    worklog.end_time.strftime('%H:%M')))
             self.connection.send_message(channel_info.channel_key,
-                                         u'{}님은 {}에 출근하고, {}에 퇴근하여, 오늘 {}시간 일했음'.format(user_info.user_name, worklog.start_time.strftime('%H:%M'), worklog.end_time.strftime('%H:%M'), worktime))
+                                         u'{}님은 {}에 출근하고, {}에 퇴근하여, 오늘 {}시간{}분 일했음'.format(user_info.user_name, worklog.start_time.strftime('%H:%M'), worklog.end_time.strftime('%H:%M'), workhour, workmin))
 
 
 
