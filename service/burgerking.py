@@ -161,7 +161,6 @@ class BurgerKingCouponGenerator():
         return r
 
     def _get_coupon_num(self , response_text):
-        print response_text
         try:
             return self.coupon_re.search(response_text).group('coupon_num')
         except:
